@@ -1,12 +1,17 @@
 #!/bin/sh
 
-kill -9 $(pidof mjpg_streamer)
-for i in $(seq 4 8); do fuser /dev/video$i; done
+pkill -9 mjpg_streamer 2>/dev/null
 
-CAM1=$(v4l2-ctl --list-devices | grep -A 3 usb | grep -A 2 "CREALITY CAM" | tail -n 1 | awk '{$1=$1; print}')
-CAM2=$(v4l2-ctl --list-devices | grep -v "CREALITY" | grep "usb" -A 1 | grep -E "/dev/video[0-9]+" | tail -n 1 | awk '{$1=$1; print}')
-export CAM1
-export CAM2
+fuser -k /dev/video4 2>/dev/null
+fuser -k /dev/video5 2>/dev/null
 
+CAM1=$(v4l2-ctl --list-devices | awk '/^CCX2F3298 .*usb-/{f=1; next} f && /\/dev\/video[0-9]+/{print $1; exit}')
+CAM2=$(v4l2-ctl --list-devices | awk '/^CCX2F3299 .*usb-/{f=1; next} f && /\/dev\/video[0-9]+/{print $1; exit}')
 
-mjpg_streamer -b -i "/usr/lib/mjpg-streamer/input_uvc.so -d $CAM1" -i "/usr/lib/mjpg-streamer/input_uvc.so -d $CAM2" -o "/usr/lib/mjpg-streamer/output_http.so -p 8080"
+echo "CAM1=$CAM1"
+echo "CAM2=$CAM2"
+
+mjpg_streamer -b \
+  -i "/usr/lib/mjpg-streamer/input_uvc.so -d $CAM1 -n cam1" \
+  -i "/usr/lib/mjpg-streamer/input_uvc.so -d $CAM2 -n cam2" \
+  -o "/usr/lib/mjpg-streamer/output_http.so -p 8080"
