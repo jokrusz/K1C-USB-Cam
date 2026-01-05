@@ -1,4 +1,4 @@
-# Work in Progress! Not usablr at this time
+# Work in Progress! Not usable at this time
 
 # Creality K1 - USB Camera from front USB Port / Dual Camera K1 + USB
 (Creality K1 - Webcam utilizando a USB frontal / Duas cameras K1 + USB)
