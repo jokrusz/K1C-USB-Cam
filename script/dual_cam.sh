@@ -28,15 +28,15 @@ v4l2-ctl --list-devices | awk '
     node=$1
     if (dev != "") print dev "|" node
   }
-' | sed '/v4l2loopback/d' > "$TMP"
+' | sed -n '/usb-/p' | sed '/v4l2loopback/d' > "$TMP"
 
 if [ ! -s "$TMP" ]; then
-  echo "Keine Kameras gefunden"
+  echo "Keine USB Kameras gefunden"
   exit 1
 fi
 
 echo
-echo "Gefundene Video Devices"
+echo "Gefundene USB Kameras"
 i=1
 while IFS= read -r line; do
   name=$(echo "$line" | sed 's/|.*//')
@@ -49,7 +49,8 @@ echo
 pick_line() {
   prompt="$1"
   while :; do
-    printf "%s " "$prompt"
+    echo "$prompt"
+    printf "> "
     read -r choice
     case "$choice" in
       ''|*[!0-9]*)
@@ -67,8 +68,8 @@ pick_line() {
   done
 }
 
-SEL1=$(pick_line "Welche Kamera soll Stream 1 sein Nummer")
-SEL2=$(pick_line "Welche Kamera soll Stream 2 sein Nummer")
+SEL1=$(pick_line "Welche USB Kamera soll Stream 1 sein Nummer")
+SEL2=$(pick_line "Welche USB Kamera soll Stream 2 sein Nummer")
 
 CAM1=$(echo "$SEL1" | sed 's/.*|//')
 CAM2=$(echo "$SEL2" | sed 's/.*|//')
@@ -80,7 +81,8 @@ if [ "$CAM1" = "$CAM2" ]; then
   exit 1
 fi
 
-printf "Port für HTTP Server [%s] " "$PORT_DEFAULT"
+printf "Port für HTTP Server [%s]\n" "$PORT_DEFAULT"
+printf "> "
 read -r PORT
 [ -n "$PORT" ] || PORT="$PORT_DEFAULT"
 
@@ -91,22 +93,24 @@ echo "  Stream 2: $CAM2  $NAME2"
 echo "  Port:     $PORT"
 echo
 
-printf "Laufenden mjpg_streamer beenden ja nein [ja] "
+echo "Laufenden mjpg_streamer beenden ja nein [ja]"
+printf "> "
 read -r ANS
 [ -n "$ANS" ] || ANS="ja"
 case "$ANS" in
   ja|j|y|Y)
-    pkill -9 mjpg_streamer 2>/dev/null
+    pkill -9 mjpg_streamer 2>/dev/null || true
     ;;
 esac
 
-printf "Prozesse beenden die die Devices nutzen ja nein [nein] "
+echo "Prozesse beenden die die Devices nutzen ja nein [nein]"
+printf "> "
 read -r KILLFUSER
 [ -n "$KILLFUSER" ] || KILLFUSER="nein"
 case "$KILLFUSER" in
   ja|j|y|Y)
-    fuser -k "$CAM1" 2>/dev/null
-    fuser -k "$CAM2" 2>/dev/null
+    fuser -k "$CAM1" 2>/dev/null || true
+    fuser -k "$CAM2" 2>/dev/null || true
     ;;
 esac
 
