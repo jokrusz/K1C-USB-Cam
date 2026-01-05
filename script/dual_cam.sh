@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -euo pipefail
 
 MJPG_BIN="${MJPG_BIN:-mjpg_streamer}"
