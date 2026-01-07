@@ -31,6 +31,34 @@ kill_users_of_cam() {
   fi
 }
 
+port_listening() {
+  PORT="$1"
+  HEXPORT=$(printf '%04X' "$PORT" | tr '[:lower:]' '[:upper:]')
+
+  if [ -r /proc/net/tcp ]; then
+    if awk -v hp=":$HEXPORT" '
+      NR>1 {
+        local=$2
+        state=$4
+        if (local ~ hp"$" && state=="0A") { found=1; exit }
+      }
+      END { exit(found?0:1) }
+    ' /proc/net/tcp; then
+      return 0
+    fi
+  fi
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -lnt 2>/dev/null | grep -q ":$PORT " && return 0
+  fi
+
+  if command -v netstat >/dev/null 2>&1; then
+    netstat -lnt 2>/dev/null | grep -q ":$PORT " && return 0
+  fi
+
+  return 2
+}
+
 pick_line() {
   file="$1"
   prompt="$2"
@@ -114,11 +142,14 @@ if [ -z "$PIDS_AFTER" ]; then
   exit 1
 fi
 
-if command -v wget >/dev/null 2>&1; then
-  if ! wget -q -O /dev/null "http://127.0.0.1:$PORT/" ; then
-    printf "mjpg_streamer läuft aber HTTP auf Port %s ist nicht erreichbar\n" "$PORT" > /dev/tty
-    exit 1
-  fi
+port_listening "$PORT"
+PORT_RC=$?
+if [ "$PORT_RC" -eq 1 ]; then
+  printf "mjpg_streamer läuft aber Port %s ist nicht im Listen Status\n" "$PORT" > /dev/tty
+  exit 1
+fi
+if [ "$PORT_RC" -eq 2 ]; then
+  printf "mjpg_streamer läuft Port Prüfung nicht möglich ss oder netstat fehlen\n" > /dev/tty
 fi
 
 printf "\nGestartet PID %s\n" "$PIDS_AFTER" > /dev/tty
